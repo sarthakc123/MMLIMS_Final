@@ -1,24 +1,24 @@
+# load_chronect.py
+
 import os
 import re
 import pandas as pd
 import sqlite3
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import time
 
-# ---------- CONFIG ----------
-FOLDER_PATH = "/Users/amd/PycharmProjects/Sarthak Cellario Scripting"
-DB_PATH = "lab_inventory.db"
+# ─── CONFIG ───────────────────────────
+# Point this at your Dropbox‐synced ChronectOutputs folder:
+CHRONECT_DIR = os.getenv("CHRONECT_INPUT_DIR",
+                         os.path.expanduser("~/Dropbox/ChronectOutputs"))
+DB_PATH = os.getenv("LAB_DB_PATH", "lab_inventory.db")
 
-# ---------- HELPERS ----------
+# ─── DB ────────────────────────────────
 def get_connection():
-    return sqlite3.connect("lab_inventory.db", check_same_thread=False)
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
-def find_chronect_files(folder_path):
-    pattern = re.compile(r"_\d{8}_\d{6}\.xlsx$")
-    return [
-        os.path.join(folder_path, f)
-        for f in os.listdir(folder_path)
-        if f.endswith(".xlsx")
-    ]
-
+# ─── NORMALIZE & INSERT ─────────────────
 def normalize_columns(df, source_file):
     df.columns = df.columns.str.strip()
     df = df.rename(columns={
@@ -41,25 +41,20 @@ def normalize_columns(df, source_file):
         "Error Message": "ErrorMessage",
         "Stable Weight?": "StableWeight"
     })
-
-    # Format fields
     df["Timestamp"] = pd.to_datetime(df["Date"].astype(str) + df["Time"].astype(str), errors="coerce")
     df["Timestamp"] = df["Timestamp"].dt.strftime('%Y-%m-%d %H:%M:%S')
-    df["StableWeight"] = df["StableWeight"].apply(lambda x: 1 if x is True else 0 if x is False else None)
-    df["SourceFile"] = os.path.basename(source_file)
-
+    df["StableWeight"] = df["StableWeight"].map({True:1, False:0})
+    df["SourceFile"]   = os.path.basename(source_file)
     return df
 
-def insert_into_database(df,conn):
+def insert_into_database(df, conn):
     cursor = conn.cursor()
-
     chronect_cols = [
-        "Barcode", "Tray", "Vial", "VialPosition", "SampleID", "UserID",
-        "SubstanceName", "Head", "LotID", "TargetWeight", "ActualWeight",
-        "Outcome", "DeviationPercent", "Date", "Time", "DispenseDuration",
-        "ErrorMessage", "StableWeight", "Timestamp", "SourceFile"
+        "Barcode","Tray","Vial","VialPosition","SampleID","UserID",
+        "SubstanceName","Head","LotID","TargetWeight","ActualWeight",
+        "Outcome","DeviationPercent","Date","Time","DispenseDuration",
+        "ErrorMessage","StableWeight","Timestamp","SourceFile"
     ]
-
     for _, row in df.iterrows():
         try:
             # Insert into chronect_data
@@ -79,26 +74,51 @@ def insert_into_database(df,conn):
 
     conn.commit()
 
-# ---------- MAIN ----------
-def load_all_chronect_files_to_db(conn):
-    file_list = find_chronect_files(FOLDER_PATH)
-    if not file_list:
-        print("⚠️ No CHRONECT files found.")
-        return
+# ─── SINGLE FILE LOADER ─────────────────
+def load_one_chronect_file(path, conn=None):
+    close_conn = False
+    if conn is None:
+        conn = get_connection()
+        close_conn = True
 
-    for file in sorted(file_list):
-        try:
-            print(f"📥 Loading: {os.path.basename(file)}")
-            df = pd.read_excel(file, engine="openpyxl")
-            df = normalize_columns(df, file)
-            insert_into_database(df,conn)
-        except Exception as e:
-            print(f"❌ Failed to load {file}: {e}")
+    try:
+        df = pd.read_excel(path, engine="openpyxl")
+        df = normalize_columns(df, path)
+        insert_into_database(df, conn)
+        print(f"✅ Ingested {os.path.basename(path)}")
+    except Exception as e:
+        print(f"❌ Failed {os.path.basename(path)}: {e}")
+    finally:
+        if close_conn:
+            conn.close()
 
-    print("✅ All CHRONECT data loaded into database.")
-
-# ---------- RUN ----------
-if __name__ == "__main__":
-    conn=get_connection()
-    load_all_chronect_files_to_db(conn)
+# ─── BULK STARTUP LOADER ─────────────────
+def load_all_chronect_files_to_db():
+    conn = get_connection()
+    pattern = re.compile(r"_\d{8}_\d{6}\.xlsx$")
+    for root, _, files in os.walk(CHRONECT_DIR):
+        for fn in sorted(files):
+            if pattern.search(fn):
+                load_one_chronect_file(os.path.join(root, fn), conn)
     conn.close()
+
+# if __name__ == "__main__":
+#     conn=get_connection()
+#     load_all_chronect_files_to_db()
+#     conn.close()
+
+# ─── WATCHDOG SETUP ─────────────────────
+class ChronectHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.endswith(".xlsx"):
+            # small delay to allow file to finish writing
+            time.sleep(1)
+            load_one_chronect_file(event.src_path)
+
+def start_chronect_watcher():
+    os.makedirs(CHRONECT_DIR, exist_ok=True)
+    obs = Observer()
+    obs.schedule(ChronectHandler(), CHRONECT_DIR, recursive=True)
+    obs.daemon = True
+    obs.start()
+    print(f"🔍 Watching {CHRONECT_DIR} for new files…")

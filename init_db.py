@@ -55,7 +55,7 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS inventory_fact (
     Barcode TEXT PRIMARY KEY,
     SubstanceName TEXT,
-    Status TEXT DEFAULT 'Ready',
+    Status TEXT DEFAULT 'Ready on Chronect',
     Source TEXT,
     FOREIGN KEY (Barcode) REFERENCES chronect_data(Barcode),
     FOREIGN KEY (Barcode) REFERENCES SubstanceName
