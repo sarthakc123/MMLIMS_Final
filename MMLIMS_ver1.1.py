@@ -6,7 +6,7 @@ import streamlit as st
 import altair as alt
 
 
-from load_chronect import load_all_chronect_files, start_chronect_watcher
+from load_chronect import start_chronect_watcher
 from tray_assignment  import assign_rack_to_ready_vials
 from init_db import init_db, get_connection
 
