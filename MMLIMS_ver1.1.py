@@ -6,19 +6,29 @@ import streamlit as st
 import altair as alt
 
 
-from load_chronect    import load_all_chronect_files_to_db, start_chronect_watcher
+from load_chronect import load_all_chronect_files, start_chronect_watcher
 from tray_assignment  import assign_rack_to_ready_vials
+from init_db import init_db, get_connection
 
 # config
-DB_PATH = os.getenv("LAB_DB_PATH", "lab_inventory.db")
-import os
-DB_PATH = "lab_inventory.db"
-print("→ Using DB:", os.path.abspath(DB_PATH))
+DB_PATH = st.secrets["database"]["path"]
+
+# Folder to watch for new Excel files:
+INPUT_DIR = st.secrets["chronect"]["input_dir"]
 
 # cached single connection
 @st.cache_resource
 def get_connection():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
+
+import load_chronect
+load_chronect.DB_PATH = DB_PATH
+load_chronect.INPUT_DIR = INPUT_DIR
+load_chronect.init_db()
+# do an initial bulk load
+load_chronect.load_all_chronect_files()
+# start the background watcher thread
+load_chronect.start_chronect_watcher()
 
 def get_master_df():
     sql = """
@@ -45,9 +55,6 @@ def update_status(barcodes, new_status):
     )
     conn.commit()
 
-# 1️⃣ load existing files at startup
-load_all_chronect_files_to_db()
-
 # 2️⃣ start the background folder watcher
 start_chronect_watcher()
 
@@ -63,7 +70,7 @@ st.dataframe(master_df, use_container_width=True)
 # 3) Add Ready → In Fridge
 st.markdown("### 🧊 Add All 'Ready' Vials to Fridge")
 if st.button("➕ Add All Ready Vials"):
-    assign_rack_to_ready_vials()
+    assign_rack_to_ready_vials(DB_PATH)
     update_status(
         master_df[master_df.Status == "Ready"]["Barcode"].tolist(),
         "In Fridge"

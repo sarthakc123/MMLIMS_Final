@@ -8,12 +8,19 @@ from sqlalchemy import create_engine,text
 import sqlite3
 
 # Connect or create the SQLite database
-conn = sqlite3.connect("lab_inventory.db")
-cursor = conn.cursor()
+DB_PATH='lab_inventory.db'
 
-# Table 1: CHRONECT data
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS chronect_data (
+def get_connection():
+    conn = sqlite3.connect(DB_PATH,check_same_thread=False)
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+def init_db(conn):
+    # Table 1: CHRONECT data
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chronect_data (
     Barcode TEXT PRIMARY KEY,
     Tray TEXT,
     Vial TEXT,
@@ -34,37 +41,37 @@ CREATE TABLE IF NOT EXISTS chronect_data (
     StableWeight INTEGER,
     Timestamp TEXT,
     SourceFile TEXT
-)
-""")
-# Table 2: Hamilton layout data (optional)
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS hamilton_data (
+    )
+    """)
+    # Table 2: Hamilton layout data (optional)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS hamilton_data (
     Barcode TEXT PRIMARY KEY,
     RackID INTEGER,
     Row TEXT,
     Column INTEGER,
     SourceFile TEXT
-)
-""")
+    )
+    """)
 
-# Table 3: Fact Table (master status + link)
-# --- Drop existing inventory_fact table ---
-cursor.execute("DROP TABLE IF EXISTS inventory_fact")
-# Recreate inventory_fact table with correct structure
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS inventory_fact (
+    # Table 3: Fact Table (master status + link)
+    # --- Drop existing inventory_fact table ---
+    cursor.execute("DROP TABLE IF EXISTS inventory_fact")
+    # Recreate inventory_fact table with correct structure
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS inventory_fact (
     Barcode TEXT PRIMARY KEY,
     SubstanceName TEXT,
     Status TEXT DEFAULT 'Ready on Chronect',
     Source TEXT,
     FOREIGN KEY (Barcode) REFERENCES chronect_data(Barcode),
     FOREIGN KEY (Barcode) REFERENCES SubstanceName
-)
-""")
+    )
+    """)
+    print("✅ Database and all 3 tables created.")
+    conn.commit()
 
-# Finalize and close
-conn.commit()
-conn.close()
-
-print("✅ Database and all 3 tables created.")
-
+if __name__ == '__main__':
+    conn = get_connection()
+    init_db(conn)
+    conn.close()
