@@ -5,12 +5,12 @@ import sqlite3
 import streamlit as st
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import dropbox
+from dropbox.exceptions import ApiError
 
-DB_TOKEN=st.secrets["chronect"]["token"]
-DB_PATH = st.secrets["database"]["path"]
-
-# Folder to watch for new Excel files:
-INPUT_DIR = st.secrets["chronect"]["input_dir"]
+DB_PATH    = st.secrets["database"]["STREAMLIT_DB"]
+DBX_TOKEN  = st.secrets["dropbox"]["TOKEN"]
+DBX_INPUT  = st.secrets["dropbox"]["INPUT_DIR"]  # e.g. "/ChronectOutputs"
 
 # ------------------ DB Helpers ------------------
 
@@ -107,13 +107,22 @@ def insert_into_database(df):
     conn.close()
 
 def load_all_chronect_files():
-    files = find_chronect_files()
-    for fn in sorted(files):
-        print("📥", fn)
-        df = pd.read_excel(fn, engine="openpyxl")
-        df = normalize_columns(df, fn)
-        insert_into_database(df)
-    print("✅ All CHRONECT files loaded.")
+    dbx = dropbox.Dropbox(DBX_TOKEN)
+    conn = get_connection()
+    try:
+        # list all .xlsx in that Dropbox folder
+        res = dbx.files_list_folder(DBX_INPUT)
+        for entry in res.entries:
+            if re.match(r".*_\d{8}_\d{6}\.xlsx$", entry.name):
+                print("📥 Loading", entry.name)
+                md, resp = dbx.files_download(entry.path_lower)
+                df = pd.read_excel(io.BytesIO(resp.content), engine="openpyxl")
+                df = normalize_columns(df, entry.name)
+                insert_into_database(df, conn)
+    except ApiError as e:
+        print("❌ Dropbox API error:", e)
+    finally:
+        conn.close()
 
 def load_one_chronect_file(path):
     print("🔔 Detected new file:", path)
