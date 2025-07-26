@@ -1,5 +1,9 @@
-streamlit==1.46.1
-pandas==2.3.1
-openpyxl==3.1.5        # for Excel reading
-watchdog==6.0.0        # if you’re using file watchers
-sqlalchemy==2.0.19     # if you’re using SQLAlchemy create_engine
+streamlit
+pandas
+openpyxl
+watchdog
+sqlalchemy
+altair
+watchdog
+sqlite3
+re

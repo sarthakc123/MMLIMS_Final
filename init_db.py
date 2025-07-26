@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 import re
-from sqlalchemy import create_engine,text
 
 import sqlite3
 
