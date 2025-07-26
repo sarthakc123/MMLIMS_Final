@@ -1,9 +1,5 @@
-streamlit
-pandas
-openpyxl
-watchdog
-sqlalchemy
-altair
-watchdog
-sqlite3
-re
+streamlit==1.46.1
+pandas==2.3.1
+openpyxl==3.1.5
+watchdog==6.0.0
+sqlalchemy==2.0.19
