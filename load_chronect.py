@@ -7,6 +7,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import dropbox
 from dropbox.exceptions import ApiError
+import io
 
 DB_PATH    = st.secrets["database"]["STREAMLIT_DB"]
 DBX_TOKEN  = st.secrets["dropbox"]["TOKEN"]
