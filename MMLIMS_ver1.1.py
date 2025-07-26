@@ -14,7 +14,7 @@ from init_db import init_db, get_connection
 DB_PATH = st.secrets["database"]["STREAMLIT_DB"]
 
 # Folder to watch for new Excel files:
-INPUT_DIR = st.secrets["chronect"]["input_dir"]
+INPUT_DIR = st.secrets["dropbox"]["input_dir"]
 
 # cached single connection
 @st.cache_resource
