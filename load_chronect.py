@@ -6,6 +6,7 @@ import streamlit as st
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+DB_TOKEN=st.secrets["chronect"]["token"]
 DB_PATH = st.secrets["database"]["path"]
 
 # Folder to watch for new Excel files:
