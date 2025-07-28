@@ -157,8 +157,20 @@ class ChronectHandler(FileSystemEventHandler):
             load_one_chronect_file(event.src_path)
 
 def start_chronect_watcher():
+    """Start a watchdog observer on INPUT_DIR if the folder exists."""
+    if not os.path.isdir(INPUT_DIR):
+        print(f"❌ Local folder {INPUT_DIR} does not exist. Watcher disabled.")
+        return
+
     observer = Observer()
     observer.schedule(ChronectHandler(), INPUT_DIR, recursive=False)
     observer.daemon = True
     observer.start()
     print("🔍 Watching", INPUT_DIR, "for new CHRONECT files…")
+    try:
+        observer.schedule(ChronectHandler(), INPUT_DIR, recursive=False)
+        observer.daemon = True
+        observer.start()
+        print("🔍 Watching", INPUT_DIR, "for new CHRONECT files…")
+    except (FileNotFoundError, OSError) as e:
+        print("❌ Failed to start watcher:", e)
