@@ -11,7 +11,7 @@ import io
 
 DB_PATH    = st.secrets["database"]["STREAMLIT_DB"]
 DBX_TOKEN  = st.secrets["dropbox"]["DBX_TOKEN"]
-DBX_INPUT  = st.secrets["dropbox"]["INPUT_DIR"]  # e.g. "/ChronectOutputs"
+INPUT_DIR  = st.secrets["dropbox"]["INPUT_DIR"]  # e.g. "/ChronectOutputs"
 
 # ------------------ DB Helpers ------------------
 
