@@ -80,8 +80,17 @@ def normalize_columns(df, source_file):
     df["SourceFile"] = os.path.basename(source_file)
     return df
 
-def insert_into_database(df):
-    conn = get_connection()
+def insert_into_database(df, conn=None):
+    """Insert CHRONECT dataframe rows into the database.
+
+    If *conn* is provided the existing connection is used, otherwise a new
+    connection is created for the duration of this call.
+    """
+    close_conn = False
+    if conn is None:
+        conn = get_connection()
+        close_conn = True
+
     c = conn.cursor()
     chronect_cols = [
       "Barcode","Tray","Vial","VialPosition","SampleID","UserID",
