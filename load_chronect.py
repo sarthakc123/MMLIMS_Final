@@ -114,7 +114,7 @@ def load_all_chronect_files():
         # list all .xlsx in that Dropbox folder
         res = dbx.files_list_folder(DBX_INPUT)
         for entry in res.entries:
-            if re.match(r".*_\d{8}_\d{6}\.xlsx$", entry.name):
+            if re.match(r"_\d{8}_\d{6}\.xlsx$", entry.name):
                 print("📥 Loading", entry.name)
                 md, resp = dbx.files_download(entry.path_lower)
                 df = pd.read_excel(io.BytesIO(resp.content), engine="openpyxl")
