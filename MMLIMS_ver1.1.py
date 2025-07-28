@@ -55,8 +55,8 @@ def update_status(barcodes, new_status):
     )
     conn.commit()
 
-# 2️⃣ start the background folder watcher
-start_chronect_watcher()
+# # 2️⃣ start the background folder watcher
+# start_chronect_watcher()
 
 # 2) Build UI
 st.set_page_config("MML Lab Inventory", layout="wide")
