@@ -143,6 +143,5 @@ if not st.session_state.master_df.empty:
                 st.dataframe(fifo_vials[["Chronect Barcode", "Substance Name", "Timestamp"]])
                 barcode_csv = fifo_vials[["Chronect Barcode"]].to_csv(index=False).encode("utf-8")
                 st.download_button('⬇️ Download Barcode List', barcode_csv, f'{selected_substance}.csv', 'text/csv')
-
     csv_master = master_df.to_csv(index=False).encode("utf-8")
-    st.download_button("⬇️ Download Master CSV", csv_master, "master_data.csv", "text/csv")
+    st.download_button("\N{DOWNWARDS BLACK ARROW} Download Master CSV", csv_master, "master_data.csv", "text/csv")

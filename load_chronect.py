@@ -109,21 +109,26 @@ def insert_into_database(df):
 
 def load_all_chronect_files():
     dbx = dropbox.Dropbox(DBX_TOKEN)
-    conn = get_connection()
     try:
-        # list all .xlsx in that Dropbox folder
+        # list all .xlsx files in the Dropbox folder
         res = dbx.files_list_folder(DBX_INPUT)
-        for entry in res.entries:
-            if re.match(r".*_\d{8}_\d{6}\.xlsx$", entry.name):
-                print("📥 Loading", entry.name)
-                md, resp = dbx.files_download(entry.path_lower)
-                df = pd.read_excel(io.BytesIO(resp.content), engine="openpyxl")
-                df = normalize_columns(df, entry.name)
-                insert_into_database(df, conn)
     except ApiError as e:
+        # give a helpful message when the folder does not exist
+        if isinstance(e.error, dropbox.files.ListFolderError):
+            lf_err = e.error
+            if lf_err.is_path() and lf_err.get_path().is_not_found():
+                print(f"❌ Dropbox folder {DBX_INPUT} not found. Check INPUT_DIR in Streamlit secrets.")
+                return
         print("❌ Dropbox API error:", e)
-    finally:
-        conn.close()
+        return
+
+    for entry in res.entries:
+        if re.match(r".*_\d{8}_\d{6}\.xlsx$", entry.name):
+            print("📥 Loading", entry.name)
+            md, resp = dbx.files_download(entry.path_lower)
+            df = pd.read_excel(io.BytesIO(resp.content), engine="openpyxl")
+            df = normalize_columns(df, entry.name)
+            insert_into_database(df)
 
 def load_one_chronect_file(path):
     print("🔔 Detected new file:", path)
@@ -147,4 +152,4 @@ def start_chronect_watcher():
     observer.schedule(ChronectHandler(), INPUT_DIR, recursive=False)
     observer.daemon = True
     observer.start()
-    print("🔍 Watching", INPUT_DIR, "for new CHRONECT files…")
+    print("🔍 Watching", INPUT_DIR, " for new CHRONECT files…")

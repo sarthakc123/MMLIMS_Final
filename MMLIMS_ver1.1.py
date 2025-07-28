@@ -146,5 +146,6 @@ if st.session_state.get("last_downloaded"):
     st.markdown("### ✅ Mark Downloaded Vials as Completed")
     if st.button("✅ Mark Completed"):
         update_status(st.session_state["last_downloaded"], "Completed")
-        st.success(f"{len(st.session_state['last_downloaded'])} vials → Completed")
+        count = len(st.session_state["last_downloaded"])
+        st.success(f"{count} vials completed")
         del st.session_state["last_downloaded"]
